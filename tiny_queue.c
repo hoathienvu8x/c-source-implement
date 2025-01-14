@@ -32,6 +32,7 @@ tiny_queue_t* tiny_queue_create() {
 
 // Push a pointer onto the queue, return -1 on error
 int tiny_queue_push(tiny_queue_t *queue, void *x) {
+  if (!queue) return -1;
   struct tiny_linked_list_t* new_node = (struct tiny_linked_list_t*)malloc(sizeof(struct tiny_linked_list_t));
 
   if (new_node == NULL) {
@@ -59,10 +60,16 @@ int tiny_queue_push(tiny_queue_t *queue, void *x) {
 
 // Pop a pointer from the queue
 void *tiny_queue_pop(tiny_queue_t *queue) {
+  if (!queue) return NULL;
   pthread_mutex_lock(&queue->mutex);
   #ifdef TINY_QUEUE_WAKE
   while(queue->head == NULL) { // block if buffer is empty
     pthread_cond_wait(&queue->wakeup, &queue->mutex);
+  }
+  #else
+  if (queue->head == NULL) {
+    pthread_mutex_unlock(&queue->mutex);
+    return NULL;
   }
   #endif
 
@@ -82,6 +89,7 @@ void *tiny_queue_pop(tiny_queue_t *queue) {
 
 // Destroy the queue with all elements
 int tiny_queue_destroy(tiny_queue_t *queue) {
+  if (!queue) return -1;
   #ifdef TINY_QUEUE_WAKE
   if (pthread_mutex_destroy(&queue->mutex) != 0 ||
       pthread_cond_destroy(&queue->wakeup) != 0)
